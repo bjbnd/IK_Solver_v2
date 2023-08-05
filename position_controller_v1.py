@@ -99,17 +99,17 @@ time.sleep(3)
 
 ######### Getting pos and orn of the end effector
 tool_position = sim.getObjectPosition(tool_handle,world_frame_handle)
-tool_orientation = sim.getObjectQuaternion(tool_handle,world_frame_handle)
-pos_x = tool_position[0]
-pos_y = tool_position[1]
-pos_z = tool_position[2]
+#tool_orientation = sim.getObjectQuaternion(tool_handle,world_frame_handle)
+pos_x, pos_y, pos_z = tool_position[0], tool_position[1], tool_position[2]
+
 logger.info(f'Current Tool X Position: {pos_x:.{3}f}')
 logger.info(f'Current Tool Y Position: {pos_y:.{3}f}')
 logger.info(f'Current Tool Z Position: {pos_z:.{3}f}')
 
-# reading joint angles
+# reading joint angles and vel
 #joint_angle = np.array([])
 joint_angle = np.zeros(nj)
+
 for i in range(nj):
     angle = sim.getJointPosition(joint_handle[i])
     #joint_angle = np.append(joint_angle,angle)
@@ -138,8 +138,9 @@ for i in range(nj):
     joint_traj[i] = trapezoidal(joint_angle[i],j_final[0,i],time_duration * control_frequency)
 
 # Reaching to target pose
-dja = np.rad2deg(joint_angle)
-results = [[0,tool_position[0],tool_position[1],tool_position[2],dja[0],dja[1],dja[2],dja[3],dja[4],dja[5],dja[6]]]
+degree_joint_angle = np.rad2deg(joint_angle)
+ 
+results = [[0, *tool_position, *degree_joint_angle]]
 n = time_duration * control_frequency
 for t in range(n):
     for i in range(0,7):
@@ -150,11 +151,12 @@ for t in range(n):
 
     for i in range(7):
         angle = sim.getJointPosition(joint_handle[i])
-        #joint_angle = np.append(joint_angle,angle)
         joint_angle[i] = angle
     tool_position = sim.getObjectPosition(tool_handle,world_frame_handle)
-    dja = np.rad2deg(joint_angle)
-    results.append([t+1,tool_position[0],tool_position[1],tool_position[2],dja[0],dja[1],dja[2],dja[3],dja[4],dja[5],dja[6]])
+    degree_joint_angle = np.rad2deg(joint_angle)
+
+    tmp_results = [(t+1)/control_frequency,*tool_position, *degree_joint_angle]
+    results.append(tmp_results)
 
 
 for i in range(7):
@@ -173,10 +175,10 @@ logger.info(f'Current Tool Z Position: {pos_z:.{3}f}')
 #logger.info(tool_orientation)
 
 # Save results to a CSV file
-output_file = "Joint_results.csv"
+output_file = "Results.csv"
 with open(output_file, mode='w', newline='') as file:
     writer = csv.writer(file)
-    writer.writerow(["step", "x", "y", "z", "J1", "J2", "J3", "J4" , "J5" , "J6" , "J7"])
+    writer.writerow(["step", "x", "y", "z","J1", "J2", "J3", "J4" , "J5" , "J6" , "J7"])
     writer.writerows(results)
 
 ##### closing the simulation
